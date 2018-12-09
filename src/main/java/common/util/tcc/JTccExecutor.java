@@ -11,7 +11,7 @@ import common.util.tcc.exception.TccException;
 /**
  * TCC执行器
  * 
- * 管理、执行业务
+ * 任务编排、执行业务(TRY失败自动补偿)
  * 
  * @author jieli
  *
@@ -23,8 +23,8 @@ import common.util.tcc.exception.TccException;
 public class JTccExecutor<U, V> {
 	private ILog log = new Logger();
 	private ITccManager manager = null;
-	private String txId = null; // 事务ID
-	private List<TccEntity<U, V>> lst = new ArrayList<>(); // 业务实体集合
+	private String txId = null; // 事务ID(唯一性)
+	private List<TccEntity<U, V>> lst = new ArrayList<>(); // 编排的任务列表
 
 	private static final int FAILED = -1;
 	private static final int SUCCESS = 1;
@@ -34,7 +34,7 @@ public class JTccExecutor<U, V> {
 	}
 
 	/**
-	 * 注册业务
+	 * 注册任务，按序编排
 	 * 
 	 * @param task
 	 */
@@ -87,15 +87,15 @@ public class JTccExecutor<U, V> {
 			try {
 				if (task.tryFor(request)) {
 					one.setTryStatus(SUCCESS);
-					log.info("TCC TRY", String.format("TRY Task: {Name: %s} SUCCESS", task.getName()));
+					log.infoPid(txId, "TCC TRY", String.format("TRY Task: {Name: %s} SUCCESS", task.getName()));
 				} else {
 					one.setTryStatus(FAILED);
-					log.info("TCC TRY", String.format("TRY Task: {Name: %s} FAILED", task.getName()));
+					log.infoPid(txId, "TCC TRY", String.format("TRY Task: {Name: %s} FAILED", task.getName()));
 					throw new TccException(String.format("TRY Task: {Name: %s} FAILED", task.getName()));
 				}
 			} catch (Exception e) {
-				log.error("TCC TRY", String.format("TRY Task: {Name: %s} ERROR", task.getName()));
-				log.error("TCC TRY", e);
+				log.infoPid(txId, "TCC TRY", String.format("TRY Task: {Name: %s} ERROR", task.getName()));
+				log.errorPid(txId, "TCC TRY", e);
 				throw new TccException(e);
 			}
 		}
@@ -107,17 +107,17 @@ public class JTccExecutor<U, V> {
 				AbstractTccTask<U, V> task = one.getTask();
 				switch (one.getTryStatus()) {
 				case FAILED:
-					log.info("TCC CANCEL", String.format("FIXME! Task: {Name: %s} TryStatus: FAILED", task.getName()));
+					log.infoPid(txId, "TCC CANCEL", String.format("FIXME! Task: {Name: %s} TryStatus: FAILED", task.getName()));
 					break;
 				case SUCCESS:
 					try {
 						task.cancel(request);
 						one.setCancelStatus(SUCCESS);
-						log.info("TCC CANCEL", String.format("CANCEL Task: {Name: %s} SUCCESS", task.getName()));
+						log.infoPid(txId, "TCC CANCEL", String.format("CANCEL Task: {Name: %s} SUCCESS", task.getName()));
 					} catch (Exception e) {
 						one.setCancelStatus(FAILED);
-						log.error("TCC CANCEL", String.format("CANCEL Task: {Name: %s} ERROR", task.getName()));
-						log.error("TCC CANCEL", e);
+						log.infoPid(txId, "TCC CANCEL", String.format("CANCEL Task: {Name: %s} ERROR", task.getName()));
+						log.errorPid(txId, "TCC CANCEL", e);
 						throw new TccException(e);
 					}
 					break;
@@ -151,12 +151,12 @@ public class JTccExecutor<U, V> {
 				try {
 					V tmp = (V) task.confirm(request);
 					one.setConfirmStatus(SUCCESS);
-					log.info("TCC CONFIRM", String.format("CONFIRM Task: {Name: %s} SUCCESS", task.getName()));
+					log.infoPid(txId, "TCC CONFIRM", String.format("CONFIRM Task: {Name: %s} SUCCESS", task.getName()));
 					ret.add(tmp);
 				} catch (Exception e) {
 					one.setConfirmStatus(FAILED);
-					log.error("TCC CONFIRM", String.format("CONFIRM Task: {Name: %s} ERROR", task.getName()));
-					log.error("TCC CONFIRM", e);
+					log.infoPid(txId, "TCC CONFIRM", String.format("CONFIRM Task: {Name: %s} ERROR", task.getName()));
+					log.errorPid(txId, "TCC CONFIRM", e);
 					throw e;
 				}
 			}
@@ -166,7 +166,7 @@ public class JTccExecutor<U, V> {
 		}
 	}
 
-	/** 事务ID */
+	/** 事务ID(唯一性) */
 	public String getTxId() {
 		return txId;
 	}

@@ -29,6 +29,8 @@ public abstract class AbstractConsumer<U extends Serializable> extends AbstractF
 
 	public AbstractConsumer() {
 		init();
+		if (topic == null || topic.length() == 0)
+			throw new IllegalArgumentException("topic can NOT be empty or null");
 		ses.set(Executors.newSingleThreadScheduledExecutor());
 		ses.get().scheduleAtFixedRate(new Runnable() {
 			@Override

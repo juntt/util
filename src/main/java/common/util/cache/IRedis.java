@@ -11,10 +11,11 @@ import java.util.List;
 public interface IRedis {
 	// === Lock ===
 	/**
-	 * SETNX(key, value); EXPIRE(key, seconds);
+	 * SET(K, V, "EX", seconds, "NX") = SETNX + EXPIRE
 	 * 
 	 * @param key
 	 * @param seconds
+	 *            超时时间(s)
 	 * @param value
 	 * @return
 	 */
@@ -24,8 +25,9 @@ public interface IRedis {
 	 * DEL(key);
 	 * 
 	 * @param key
+	 * @param value
 	 */
-	void unLock(String key);
+	void unLock(String key, String value);
 
 	// === Cache ===
 	/**

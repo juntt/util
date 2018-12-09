@@ -14,7 +14,7 @@ public interface ITccManager {
 	 *            业务的唯一键
 	 * @param timeout
 	 *            超时时间(s)
-	 * @return TxId(唯一)
+	 * @return TxId(唯一性)
 	 */
 	String bind(String key, long timeout);
 
